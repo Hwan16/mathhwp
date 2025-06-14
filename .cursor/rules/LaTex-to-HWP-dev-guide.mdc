@@ -72,9 +72,9 @@ type: Always
 ## 단계별 개발 체크리스트
 
 ### 0단계: 개발 환경 설정
--   [ ] **Python 설치:** Python 3.10 이상 버전 설치 및 환경 변수(PATH) 설정
--   [ ] **가상 환경 생성:** 프로젝트 폴더 생성 후, `venv`를 사용하여 독립된 가상 환경 구축 (`python -m venv venv`)
--   [ ] **핵심 라이브러리 설치:** 가상 환경 활성화 후, 필요한 라이브러리 설치
+-   [x] **Python 설치:** Python 3.10 이상 버전 설치 및 환경 변수(PATH) 설정
+-   [x] **가상 환경 생성:** 프로젝트 폴더 생성 후, `venv`를 사용하여 독립된 가상 환경 구축 (`python -m venv venv`)
+-   [x] **핵심 라이브러리 설치:** 가상 환경 활성화 후, 필요한 라이브러리 설치
     ```bash
     pip install pyhwpx latex2mathml PySide6 pyinstaller
     ```
