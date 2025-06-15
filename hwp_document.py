@@ -21,8 +21,8 @@ def create_hwp_document(latex_content: str, output_path: str = None) -> Hwp:
     # 텍스트와 수식 분리
     parts = split_text_and_latex(latex_content)
     
-    # 각 부분을 순차적으로 처리
-    for part_type, content in parts:
+    # 각 부분을 순차적으로 처리 (개선된 방식)
+    for i, (part_type, content) in enumerate(parts):
         if part_type == 'text':
             # 일반 텍스트 삽입
             hwp.insert_text(content)
@@ -35,8 +35,11 @@ def create_hwp_document(latex_content: str, output_path: str = None) -> Hwp:
                 # 임시 MathML 파일 생성
                 temp_mml_path = create_temp_mathml_file(mathml_content)
                 
-                # HWP에 수식 삽입
-                hwp.import_mathml(temp_mml_path)
+                # HWP에 수식 삽입 (개선된 방식)
+                hwp.import_mathml(temp_mml_path, delay=0.3)  # 대기 시간 증가
+                
+                # 수식 삽입 후 추가 대기 (순서 보장)
+                time.sleep(0.1)
                 
                 # 임시 파일 정리
                 cleanup_temp_file(temp_mml_path)
@@ -50,6 +53,8 @@ def create_hwp_document(latex_content: str, output_path: str = None) -> Hwp:
     # 파일 저장
     if output_path:
         try:
+            # 문서 완성 후 추가 대기
+            time.sleep(0.5)
             hwp.save_as(output_path)
             print(f"문서가 저장되었습니다: {output_path}")
         except Exception as e:
@@ -59,7 +64,7 @@ def create_hwp_document(latex_content: str, output_path: str = None) -> Hwp:
 
 def process_math_problems(problems_list: List[str], output_path: str = None) -> Hwp:
     """
-    여러 수학 문제를 처리하여 하나의 HWPX 문서로 생성하는 함수
+    여러 수학 문제를 처리하여 하나의 HWPX 문서로 생성하는 함수 (수정된 버전)
     
     Args:
         problems_list (List[str]): LaTeX 형식의 수학 문제 리스트
@@ -74,38 +79,48 @@ def process_math_problems(problems_list: List[str], output_path: str = None) -> 
     for i, problem_text in enumerate(problems_list, 1):
         print(f"문제 {i} 처리 중...")
         
-        # 문제를 줄 단위로 분리
-        lines = problem_text.strip().split('\n')
+        # 전체 텍스트를 한 번에 파싱 (줄 단위 분리 제거!)
+        parts = split_text_and_latex(problem_text.strip())
         
-        for line in lines:
-            if line.strip():  # 빈 줄이 아닌 경우만 처리
-                # 텍스트와 수식 분리
-                parts = split_text_and_latex(line)
-                
-                for part_type, content in parts:
-                    if part_type == 'text':
-                        hwp.insert_text(content)
-                    elif part_type == 'math':
-                        try:
-                            # LaTeX → MathML 변환 후 삽입
-                            mathml_content = convert_latex_to_mathml(content)
-                            temp_mml_path = create_temp_mathml_file(mathml_content)
-                            hwp.import_mathml(temp_mml_path)
-                            cleanup_temp_file(temp_mml_path)
-                        except Exception as e:
-                            print(f"수식 변환 오류: {e}")
-                            hwp.insert_text(f"[수식 오류: {content}]")
-                
-                # 줄바꿈
-                hwp.insert_text("\r\n")
+        for part_idx, (part_type, content) in enumerate(parts):
+            if part_type == 'text':
+                # 줄바꿈 문자를 HWP 형식으로 변환
+                content = content.replace('\n', '\r\n')
+                hwp.insert_text(content)
+            elif part_type == 'math':
+                try:
+                    print(f"  → 수식 처리: {content[:30]}...")
+                    
+                    # LaTeX → MathML 변환 후 삽입
+                    mathml_content = convert_latex_to_mathml(content)
+                    temp_mml_path = create_temp_mathml_file(mathml_content)
+                    
+                    # 수식 삽입 (순서 보장을 위한 개선)
+                    hwp.import_mathml(temp_mml_path, delay=0.3)
+                    
+                    # 수식 삽입 후 대기 (중요!)
+                    time.sleep(0.2)
+                    
+                    cleanup_temp_file(temp_mml_path)
+                    print(f"  ✅ 수식 삽입 완료")
+                    
+                except Exception as e:
+                    print(f"  ❌ 수식 변환 오류: {e}")
+                    print(f"  실패한 LaTeX: {content}")
+                    # 오류 발생 시 원본 LaTeX를 텍스트로 삽입
+                    hwp.insert_text(f"[수식 오류: {content}]")
         
         # 문제 간 간격 추가
         if i < len(problems_list):
-            hwp.insert_text("\r\n")
+            hwp.insert_text("\r\n\r\n")
     
     # 파일 저장
     if output_path:
         try:
+            # 모든 처리 완료 후 충분한 대기
+            print("문서 저장 준비 중...")
+            time.sleep(1.0)
+            
             hwp.save_as(output_path)
             print(f"문서가 저장되었습니다: {output_path}")
         except Exception as e:
@@ -123,7 +138,7 @@ def test_hwp_document():
     print(f"테스트 1: {test1}")
     
     try:
-        hwp1 = create_hwp_document(test1, "test1.hwpx")
+        hwp1 = create_hwp_document(test1, "test1_improved.hwpx")
         print("✅ 테스트 1 성공")
         time.sleep(1)  # HWP 처리 대기
     except Exception as e:
@@ -138,7 +153,7 @@ def test_hwp_document():
     print(f"테스트 2: 복잡한 수식 문제")
     
     try:
-        hwp2 = create_hwp_document(test2, "test2.hwpx")
+        hwp2 = create_hwp_document(test2, "test2_improved.hwpx")
         print("✅ 테스트 2 성공")
         time.sleep(1)  # HWP 처리 대기
     except Exception as e:
@@ -156,7 +171,7 @@ def test_hwp_document():
     print("테스트 3: 여러 문제 통합 문서")
     
     try:
-        hwp3 = process_math_problems(problems, "test_multiple.hwpx")
+        hwp3 = process_math_problems(problems, "test_multiple_improved.hwpx")
         print("✅ 테스트 3 성공")
     except Exception as e:
         print(f"❌ 테스트 3 실패: {e}")

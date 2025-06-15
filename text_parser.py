@@ -39,8 +39,8 @@ def split_text_and_latex(full_text: str) -> List[Tuple[str, str]]:
     for start, end, math_type, math_content in math_matches:
         # 수식 앞의 일반 텍스트 부분
         if start > last_end:
-            text_part = full_text[last_end:start].strip()
-            if text_part:  # 빈 문자열이 아닌 경우만 추가
+            text_part = full_text[last_end:start]
+            if text_part.strip():  # 공백만 있는 경우가 아니면 추가
                 parts.append(('text', text_part))
         
         # 수식 부분 추가
@@ -49,8 +49,8 @@ def split_text_and_latex(full_text: str) -> List[Tuple[str, str]]:
     
     # 마지막 텍스트 부분
     if last_end < len(full_text):
-        remaining_text = full_text[last_end:].strip()
-        if remaining_text:
+        remaining_text = full_text[last_end:]
+        if remaining_text.strip():
             parts.append(('text', remaining_text))
     
     return parts
